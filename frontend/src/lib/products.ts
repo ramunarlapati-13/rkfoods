@@ -83,7 +83,7 @@ export const PRODUCTS: Product[] = [
     category: 'pickles',
     dietType: 'veg',
     description:
-      'Intensely savory, herbaceous paste of fresh curry leaves, tamarind pulp, garlic cloves, and toasted spices. Unlike anything you've tasted before.',
+      `Intensely savory, herbaceous paste of fresh curry leaves, tamarind pulp, garlic cloves, and toasted spices. Unlike anything you've tasted before.`,
     ingredients: ['Fresh curry leaves', 'Tamarind pulp', 'Garlic', 'Mustard seeds', 'Dried chili', 'Sesame oil'],
     imageUrl: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=600&q=80',
     images: ['https://images.unsplash.com/photo-1547592180-85f173990554?w=600&q=80'],
