@@ -1,28 +1,38 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import HeroVideo from '@/components/HeroVideo';
 import ProductCard from '@/components/ProductCard';
 import CategoryFilter from '@/components/CategoryFilter';
 import Link from 'next/link';
-import { PRODUCTS, FEATURED_PRODUCTS } from '@/lib/products';
-import { Category, DietFilter } from '@/lib/types';
+import { PRODUCTS, fetchProductsFromDb } from '@/lib/products';
+import { Category, DietFilter, Product } from '@/lib/types';
 import { FiArrowRight } from 'react-icons/fi';
 
 export default function HomePage() {
   const [category, setCategory] = useState<Category>('all');
   const [diet, setDiet] = useState<DietFilter>('all');
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
 
-  const filtered = PRODUCTS.filter((p) => {
+  useEffect(() => {
+    (async () => {
+      const list = await fetchProductsFromDb();
+      setProducts(list);
+    })();
+  }, []);
+
+  const filtered = products.filter((p) => {
     if (category !== 'all' && p.category !== category) return false;
     if (diet !== 'all' && p.dietType !== diet) return false;
     return true;
   });
 
+  const featured = products.filter((p) => p.featured);
+
   const counts = {
-    all: PRODUCTS.length,
-    pickles: PRODUCTS.filter((p) => p.category === 'pickles').length,
-    sweets: PRODUCTS.filter((p) => p.category === 'sweets').length,
+    all: products.length,
+    pickles: products.filter((p) => p.category === 'pickles').length,
+    sweets: products.filter((p) => p.category === 'sweets').length,
     meals: 0,
   };
 
@@ -69,7 +79,7 @@ export default function HomePage() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {FEATURED_PRODUCTS.map((p, i) => (
+          {featured.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>

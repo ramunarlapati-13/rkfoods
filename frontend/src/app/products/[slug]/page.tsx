@@ -1,20 +1,85 @@
 'use client';
 import { notFound } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { PRODUCTS } from '@/lib/products';
+import { supabase } from '@/lib/supabase';
+import { Product } from '@/lib/types';
 import HeatSlider from '@/components/HeatSlider';
+import ReviewSection from '@/components/ReviewSection';
 import { useCart } from '@/context/CartContext';
 import { FiShoppingCart, FiStar, FiMinus, FiPlus } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 export default function ProductDetailPage({ params }: { params: { slug: string } }) {
-  const product = PRODUCTS.find((p) => p.slug === params.slug);
-  if (!product) notFound();
-
-  const { addItem } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [qty, setQty] = useState(1);
+  const { addItem } = useCart();
+
+  const loadProduct = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('slug', params.slug)
+        .single();
+      if (error) throw error;
+      if (data) {
+        setProduct({
+          id: data.id,
+          sku: data.sku,
+          name: data.name,
+          nameTeluguScript: data.name_telugu_script || '',
+          slug: data.slug,
+          category: data.category as 'pickles' | 'sweets' | 'meals',
+          dietType: (data.diet_type as 'veg' | 'nonveg') || undefined,
+          description: data.description || '',
+          ingredients: data.ingredients || [],
+          imageUrl: data.image_url || '',
+          images: data.images || [],
+          actualPrice: Number(data.actual_price),
+          sellingPrice: Number(data.selling_price),
+          rating: Number(data.rating || 0),
+          reviewCount: Number(data.review_count || 0),
+          inStock: Boolean(data.in_stock),
+          availableLocations: data.available_locations || [],
+          heatLevel: Number(data.heat_level || 5),
+          featured: Boolean(data.featured),
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at),
+        });
+      } else {
+        const local = PRODUCTS.find((p) => p.slug === params.slug);
+        if (local) setProduct(local);
+        else notFound();
+      }
+    } catch (err) {
+      console.warn('DB error, loading static product details:', err);
+      const local = PRODUCTS.find((p) => p.slug === params.slug);
+      if (local) setProduct(local);
+      else notFound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProduct();
+  }, [params.slug]);
+
+  if (loading) {
+    return (
+      <div className="pt-32 text-center">
+        <div className="skeleton h-8 w-48 mx-auto rounded-xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!product) {
+    notFound();
+  }
 
   const handleAddToCart = () => {
     addItem({
@@ -167,6 +232,9 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
           </div>
         </motion.div>
       </div>
+
+      {/* Review Section */}
+      <ReviewSection product={product} onReviewSubmitted={loadProduct} />
     </div>
   );
 }

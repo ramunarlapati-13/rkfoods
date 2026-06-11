@@ -1,4 +1,5 @@
 import { Product } from './types';
+import { supabase } from './supabase';
 
 // Static seed data used for UI development before Firebase is connected
 export const PRODUCTS: Product[] = [
@@ -196,3 +197,44 @@ export const PRODUCTS: Product[] = [
 export const FEATURED_PRODUCTS = PRODUCTS.filter((p) => p.featured);
 export const PICKLE_PRODUCTS = PRODUCTS.filter((p) => p.category === 'pickles');
 export const SWEET_PRODUCTS = PRODUCTS.filter((p) => p.category === 'sweets');
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchProductsFromDb(): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('sku', { ascending: true });
+
+    if (error) throw error;
+    if (!data || data.length === 0) return PRODUCTS;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return data.map((p: any) => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      nameTeluguScript: p.name_telugu_script || '',
+      slug: p.slug,
+      category: p.category,
+      dietType: p.diet_type || undefined,
+      description: p.description || '',
+      ingredients: p.ingredients || [],
+      imageUrl: p.image_url || '',
+      images: p.images || [],
+      actualPrice: Number(p.actual_price),
+      sellingPrice: Number(p.selling_price),
+      rating: Number(p.rating || 0),
+      reviewCount: Number(p.review_count || 0),
+      inStock: Boolean(p.in_stock),
+      availableLocations: p.available_locations || [],
+      heatLevel: Number(p.heat_level || 5),
+      featured: Boolean(p.featured),
+      createdAt: new Date(p.created_at),
+      updatedAt: new Date(p.updated_at),
+    }));
+  } catch (err) {
+    console.error('Failed to fetch products from Supabase, using mock fallback:', err);
+    return PRODUCTS;
+  }
+}

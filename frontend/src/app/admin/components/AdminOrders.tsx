@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { Order } from '@/lib/types';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -20,10 +19,28 @@ export default function AdminOrders() {
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, 'orders'));
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setOrders(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-      } catch {
+        setOrders(data.map((o: any) => ({
+          id: o.id,
+          userId: o.user_id,
+          items: o.items,
+          totalAmount: Number(o.total_amount),
+          status: o.status,
+          customerName: o.customer_name,
+          customerPhone: o.customer_phone,
+          customerEmail: o.customer_email,
+          shippingAddress: o.shipping_address,
+          trackingId: o.tracking_id || undefined,
+          createdAt: new Date(o.created_at),
+          updatedAt: new Date(o.updated_at),
+        })));
+      } catch (err) {
+        console.error('Error fetching orders from Supabase:', err);
         setOrders([]);
       } finally {
         setLoading(false);
@@ -33,9 +50,12 @@ export default function AdminOrders() {
 
   const updateStatus = async (orderId: string, status: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status });
+      const { error } = await supabase.from('orders').update({ status }).eq('id', orderId);
+      if (error) throw error;
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: status as Order['status'] } : o)));
-    } catch { /* Firestore not configured */ }
+    } catch (err) {
+      console.error('Error updating order status in Supabase:', err);
+    }
   };
 
   if (loading) return <div className="skeleton h-48 rounded-2xl" />;

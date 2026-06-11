@@ -43,20 +43,18 @@ export default function AdminImport() {
     if (rows.length === 0) return;
     setImporting(true);
     try {
-      const { db } = await import('@/lib/firebase');
-      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { supabase } = await import('@/lib/supabase');
       let count = 0;
       for (const row of rows) {
-        await addDoc(collection(db, 'products'), {
+        const { error } = await supabase.from('products').insert({
           name: row.name || row.Name || '',
           category: (row.category || row.Category || 'pickles').toLowerCase(),
-          actualPrice: Number(row.actualPrice || row['Actual Price'] || 0),
-          sellingPrice: Number(row.sellingPrice || row['Selling Price'] || 0),
-          sku: `RKF${Date.now().toString().slice(-6)}`,
-          inStock: true,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          actual_price: Number(row.actualPrice || row['Actual Price'] || 0),
+          selling_price: Number(row.sellingPrice || row['Selling Price'] || 0),
+          sku: `RKF${Math.floor(100000 + Math.random() * 900000)}`, // Generate 6-digit random SKU suffix to ensure uniqueness
+          in_stock: true,
         });
+        if (error) throw error;
         count++;
       }
       toast.success(`${count} products imported successfully!`);

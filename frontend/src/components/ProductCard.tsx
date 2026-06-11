@@ -2,9 +2,10 @@
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiStar, FiShoppingCart } from 'react-icons/fi';
+import { FiStar, FiShoppingCart, FiHeart } from 'react-icons/fi';
 import { Product } from '@/lib/types';
 import { useCart } from '@/context/CartContext';
+import { useStore } from '@/lib/store';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -14,6 +15,10 @@ interface Props {
 
 export default function ProductCard({ product, index = 0 }: Props) {
   const { addItem } = useCart();
+  const toggleWishlist = useStore((state) => state.toggleWishlist);
+  const inWishlist = useStore((state) => state.inWishlist);
+  const isWishlisted = inWishlist(product.id);
+
   const discount = Math.round(((product.actualPrice - product.sellingPrice) / product.actualPrice) * 100);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -29,6 +34,17 @@ export default function ProductCard({ product, index = 0 }: Props) {
     toast.success(`${product.name} added to cart!`);
   };
 
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+    if (!isWishlisted) {
+      toast.success(`${product.name} saved to wishlist! ❤️`);
+    } else {
+      toast.success(`${product.name} removed from wishlist.`);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -39,7 +55,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
       <Link
         href={`/products/${product.slug}`}
         id={`product-card-${product.id}`}
-        className="group block card overflow-hidden hover:-translate-y-1 transition-all duration-300"
+        className="group block card overflow-hidden hover:-translate-y-1 transition-all duration-300 relative"
       >
         {/* Image */}
         <div className="relative h-56 overflow-hidden">
@@ -67,8 +83,8 @@ export default function ProductCard({ product, index = 0 }: Props) {
             )}
           </div>
 
-          {/* Category / diet badge */}
-          <div className="absolute top-3 right-3">
+          {/* Category / diet badge & wishlist */}
+          <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
             {product.dietType && (
               <span
                 className={`text-xs font-bold px-2 py-1 rounded-lg ${
@@ -80,6 +96,17 @@ export default function ProductCard({ product, index = 0 }: Props) {
                 {product.dietType === 'veg' ? '🟢 Veg' : '🔴 Non-Veg'}
               </span>
             )}
+            <button
+              id={`wishlist-toggle-${product.id}`}
+              onClick={handleWishlistToggle}
+              className="p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white transition-colors"
+              aria-label="Toggle Wishlist"
+            >
+              <FiHeart
+                size={16}
+                className={isWishlisted ? 'text-clay fill-clay' : 'text-white'}
+              />
+            </button>
           </div>
 
           {/* Telugu name on hover */}

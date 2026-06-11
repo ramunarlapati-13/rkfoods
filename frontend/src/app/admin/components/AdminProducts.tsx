@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { PRODUCTS } from '@/lib/products';
 import { FiTrash2, FiEdit2, FiPlus } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -13,13 +12,39 @@ export default function AdminProducts() {
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, 'products'));
-        if (!snap.empty) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('sku', { ascending: true });
+        if (error) throw error;
+        if (data && data.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setProducts(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+          setProducts(data.map((p: any) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            nameTeluguScript: p.name_telugu_script || '',
+            slug: p.slug,
+            category: p.category,
+            dietType: p.diet_type || undefined,
+            description: p.description || '',
+            ingredients: p.ingredients || [],
+            imageUrl: p.image_url || '',
+            images: p.images || [],
+            actualPrice: Number(p.actual_price),
+            sellingPrice: Number(p.selling_price),
+            rating: Number(p.rating || 0),
+            reviewCount: Number(p.review_count || 0),
+            inStock: Boolean(p.in_stock),
+            availableLocations: p.available_locations || [],
+            heatLevel: Number(p.heat_level || 5),
+            featured: Boolean(p.featured),
+            createdAt: new Date(p.created_at),
+            updatedAt: new Date(p.updated_at),
+          })));
         }
-      } catch {
-        // Firestore not yet configured — use seed data
+      } catch (err) {
+        console.error('Error loading products from Supabase:', err);
       } finally {
         setLoadingDb(false);
       }
@@ -29,11 +54,12 @@ export default function AdminProducts() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this product?')) return;
     try {
-      await deleteDoc(doc(db, 'products', id));
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
       setProducts((prev) => prev.filter((p) => p.id !== id));
       toast.success('Product deleted.');
-    } catch {
-      toast.error('Delete failed (Firestore not configured yet).');
+    } catch (err: any) {
+      toast.error(err.message || 'Delete failed.');
     }
   };
 

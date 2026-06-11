@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { FiShoppingCart, FiMenu, FiX, FiUser, FiLogOut } from 'react-icons/fi';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useStore } from '@/lib/store';
+import { FiShoppingCart, FiMenu, FiX, FiUser, FiLogOut, FiHeart } from 'react-icons/fi';
+import { supabase } from '@/lib/supabase';
 import AuthModal from './AuthModal';
 import toast from 'react-hot-toast';
 
@@ -15,12 +15,14 @@ const NAV_LINKS = [
   { label: 'Pickles', href: '/products?category=pickles' },
   { label: 'Sweets', href: '/products?category=sweets' },
   { label: 'Heritage Box', href: '/sampler' },
+  { label: 'B2B Portal', href: '/b2b' },
   { label: 'Contact', href: '/contact' },
 ];
 
 export default function Navbar() {
   const { count } = useCart();
   const { user } = useAuth();
+  const wishlistCount = useStore((state) => state.wishlist.length);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function Navbar() {
   }, []);
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     toast.success('Signed out successfully');
     setUserMenuOpen(false);
   };
@@ -80,6 +82,26 @@ export default function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
+            {/* Wishlist */}
+            <Link
+              href="/wishlist"
+              id="nav-wishlist-btn"
+              className="relative p-2.5 rounded-xl hover:bg-white/10 transition-colors"
+              title="Wishlist"
+            >
+              <FiHeart size={20} style={{ color: 'var(--text-primary)' }} />
+              {wishlistCount > 0 && (
+                <motion.span
+                  key={wishlistCount}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-clay text-cream text-xs font-bold rounded-full flex items-center justify-center"
+                >
+                  {wishlistCount}
+                </motion.span>
+              )}
+            </Link>
+
             {/* Cart */}
             <Link
               href="/cart"

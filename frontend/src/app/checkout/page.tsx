@@ -4,8 +4,7 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { FiCheckCircle } from 'react-icons/fi';
 
@@ -43,15 +42,15 @@ export default function CheckoutPage() {
     if (!user) { toast.error('Please sign in first.'); return; }
     setLoading(true);
     try {
-      await addDoc(collection(db, 'orders'), {
-        userId: user.uid,
+      const { error } = await supabase.from('orders').insert({
+        user_id: user.uid,
         items,
-        totalAmount: total,
+        total_amount: total,
         status: 'pending',
-        customerName: form.name,
-        customerPhone: form.phone,
-        customerEmail: form.email,
-        shippingAddress: {
+        customer_name: form.name,
+        customer_phone: form.phone,
+        customer_email: form.email,
+        shipping_address: {
           line1: form.line1,
           line2: form.line2,
           city: form.city,
@@ -59,13 +58,12 @@ export default function CheckoutPage() {
           pincode: form.pincode,
           country: 'India',
         },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       });
+      if (error) throw error;
       clearCart();
       setSuccess(true);
-    } catch (err) {
-      toast.error('Order failed. Please try again.');
+    } catch (err: any) {
+      toast.error(err.message || 'Order failed. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);

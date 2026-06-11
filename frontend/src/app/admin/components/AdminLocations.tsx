@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import { Location } from '@/lib/types';
 import { FiPlus, FiTrash2, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
@@ -25,37 +24,58 @@ export default function AdminLocations() {
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, 'locations'));
-        if (!snap.empty) {
+        const { data, error } = await supabase.from('locations').select('*').order('city', { ascending: true });
+        if (error) throw error;
+        if (data && data.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setLocations(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+          setLocations(data.map((l: any) => ({
+            id: l.id,
+            city: l.city,
+            state: l.state,
+            pincode: l.pincode,
+            active: Boolean(l.active)
+          })));
         }
-      } catch { /* use seed */ }
+      } catch (err) {
+        console.error('Error fetching locations from Supabase:', err);
+      }
     })();
   }, []);
 
   const toggle = async (loc: Location) => {
     try {
-      await updateDoc(doc(db, 'locations', loc.id), { active: !loc.active });
-    } catch { /* ignore */ }
+      const { error } = await supabase.from('locations').update({ active: !loc.active }).eq('id', loc.id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling location in Supabase:', err);
+    }
     setLocations((prev) => prev.map((l) => (l.id === loc.id ? { ...l, active: !l.active } : l)));
   };
 
   const addLocation = async () => {
     if (!newCity || !newState || !newPin) { toast.error('Fill all fields'); return; }
-    const loc: Omit<Location, 'id'> = { city: newCity, state: newState, pincode: newPin, active: true };
+    const loc = { city: newCity, state: newState, pincode: newPin, active: true };
     let id = Date.now().toString();
     try {
-      const ref = await addDoc(collection(db, 'locations'), loc);
-      id = ref.id;
-    } catch { /* offline */ }
+      const { data, error } = await supabase.from('locations').insert(loc).select('id').single();
+      if (error) throw error;
+      if (data) id = data.id;
+    } catch (err: any) {
+      console.error('Error adding location to Supabase:', err);
+      toast.error(err.message || 'Failed to add to database, using local fallback.');
+    }
     setLocations((prev) => [...prev, { ...loc, id }]);
     setNewCity(''); setNewState(''); setNewPin('');
     toast.success('Location added!');
   };
 
   const remove = async (id: string) => {
-    try { await deleteDoc(doc(db, 'locations', id)); } catch { /* ignore */ }
+    try {
+      const { error } = await supabase.from('locations').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error removing location in Supabase:', err);
+    }
     setLocations((prev) => prev.filter((l) => l.id !== id));
     toast.success('Location removed.');
   };

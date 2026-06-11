@@ -4,8 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { FiPackage, FiShoppingBag, FiUsers, FiMapPin, FiUpload, FiLogOut } from 'react-icons/fi';
-import { signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 import AdminProducts from './components/AdminProducts';
 import AdminOrders from './components/AdminOrders';
 import AdminLocations from './components/AdminLocations';
@@ -43,7 +42,7 @@ export default function AdminDashboard() {
   }
 
   const handleSignOut = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     toast.success('Signed out');
     router.push('/');
   };
